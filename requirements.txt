@@ -1,0 +1,6 @@
+flask>=3.0
+flask-cors
+ultralytics>=8.2
+easyocr>=1.7
+opencv-python-headless
+numpy

@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 1
+names: ['0']
+
+roboflow:
+  workspace: patrick-neicu
+  project: european-license-plates
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/patrick-neicu/european-license-plates/dataset/1

@@ -1,0 +1,12 @@
+names:
+- '0'
+nc: 1
+roboflow:
+  license: CC BY 4.0
+  project: european-license-plates
+  url: https://universe.roboflow.com/patrick-neicu/european-license-plates/dataset/1
+  version: 1
+  workspace: patrick-neicu
+test: C:\Users\krist\Documents\GitHub\OCR-Research\images-eu\test\images
+train: C:\Users\krist\Documents\GitHub\OCR-Research\images-eu\train\images
+val: C:\Users\krist\Documents\GitHub\OCR-Research\images-eu\valid\images
