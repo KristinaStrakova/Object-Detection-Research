@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plate Scanner</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg:       #0d0f14;
+    --surface:  #141720;
+    --border:   #1e2433;
+    --accent:   #00e5a0;
+    --accent2:  #ff6b35;
+    --accent3:  #5b8af5;
+    --text:     #e2e8f4;
+    --muted:    #5a6580;
+    --danger:   #ff4d6d;
+    --success:  #00e5a0;
+    --warn:     #f5c542;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ──────────────────────────────────────────── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 18px 36px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .logo-icon {
+    width: 38px; height: 38px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo-icon svg { width: 22px; height: 22px; }
+  header h1 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; }
+  header h1 span { color: var(--accent); }
+  .pill {
+    margin-left: auto;
+    background: #1a2a1e;
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    padding: 4px 10px;
+    border-radius: 100px;
+    border: 1px solid #00e5a030;
+  }
+
+  /* ── Main layout ──────────────────────────────────────── */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 0;
+    height: calc(100vh - 68px);
+  }
+
+  /* ── Left panel ───────────────────────────────────────── */
+  .left-panel {
+    border-right: 1px solid var(--border);
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+  }
+
+  .section-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  /* Drop zone */
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: #00e5a008;
+  }
+  .drop-zone input[type=file] {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .drop-icon {
+    width: 48px; height: 48px;
+    background: var(--border);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px;
+  }
+  .drop-icon svg { width: 24px; height: 24px; stroke: var(--muted); }
+  .drop-zone h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 6px; }
+  .drop-zone p { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+  .drop-zone .file-count {
+    margin-top: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+  }
+
+  /* File list */
+  .file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--surface);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    border: 1px solid var(--border);
+  }
+  .file-item .fi-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-item .fi-size { color: var(--muted); font-family: 'Space Mono', monospace; font-size: 0.68rem; }
+  .fi-dot { width: 6px; height: 6px; background: var(--accent3); border-radius: 50%; flex-shrink: 0; }
+
+  /* Run button */
+  .run-btn {
+    background: var(--accent);
+    color: #0d0f14;
+    border: none;
+    padding: 14px 20px;
+    border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .run-btn:hover { opacity: 0.9; }
+  .run-btn:active { transform: scale(0.98); }
+  .run-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+  .run-btn svg { width: 18px; height: 18px; }
+
+  /* Progress */
+  .progress-area { display: none; }
+  .progress-area.visible { display: block; }
+  .progress-bar-wrap {
+    background: var(--border);
+    border-radius: 100px;
+    height: 6px;
+    overflow: hidden;
+    margin: 8px 0;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+    border-radius: 100px;
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+  .progress-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  /* Stats row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-card .sv { font-size: 1.5rem; font-weight: 800; line-height: 1; }
+  .stat-card .sk { font-size: 0.65rem; color: var(--muted); margin-top: 4px; }
+  .sv.green { color: var(--accent); }
+  .sv.blue  { color: var(--accent3); }
+  .sv.orange{ color: var(--accent2); }
+
+  /* ── Right panel ───────────────────────────────────────── */
+  .right-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    gap: 0;
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 16px 20px 14px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    letter-spacing: 0.04em;
+  }
+  .tab-btn.active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+  .tab-btn:hover { color: var(--text); }
+
+  /* Tab content */
+  .tab-content { display: none; flex: 1; overflow-y: auto; padding: 24px 28px; }
+  .tab-content.active { display: block; }
+
+  /* Empty state */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--muted);
+    gap: 12px;
+    min-height: 300px;
+  }
+  .empty-state svg { width: 48px; height: 48px; stroke: var(--border); }
+  .empty-state p { font-size: 0.85rem; }
+
+  /* Log table */
+  .log-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  .log-table th {
+    text-align: left;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 12px 10px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+  }
+  .log-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #1a1f2e;
+    vertical-align: middle;
+  }
+  .log-table tr:hover td { background: #ffffff04; }
+
+  .plate-text {
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 0.88rem;
+    letter-spacing: 0.05em;
+    color: var(--text);
+  }
+  .country-badge {
+    display: inline-block;
+    background: #1a2a4a;
+    color: var(--accent3);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #2a3a5a;
+    margin-right: 6px;
+  }
+  .count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 22px;
+    background: #1a2030;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    padding: 0 6px;
+  }
+  .count-badge.confirmed {
+    background: #0d2a1a;
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .conf-bar-wrap {
+    background: var(--border);
+    border-radius: 100px;
+    height: 4px;
+    width: 80px;
+    overflow: hidden;
+  }
+  .conf-bar {
+    height: 100%;
+    border-radius: 100px;
+    background: var(--accent3);
+  }
+  .conf-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* Confirmed cars panel */
+  .confirmed-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+  }
+  .car-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+  .car-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+  }
+  .car-card .cc-plate {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text);
+  }
+  .car-card .cc-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .meta-chip {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .meta-chip.count { border-color: var(--accent); color: var(--accent); }
+  .meta-chip.ctry  { border-color: var(--accent3); color: var(--accent3); }
+
+  /* ── Spinner ──────────────────────────────────────────── */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid #0d0f14;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  .spinner.active { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+  /* Error row */
+  .error-row td { color: var(--danger); font-family: 'Space Mono', monospace; font-size: 0.72rem; }
+
+  /* ── Detailed log ────────────────────────────────────── */
+  .file-group-header td {
+    background: #171d2e !important;
+    border-top: 2px solid var(--border);
+    padding: 8px 12px;
+  }
+  .file-group-label { font-weight: 700; font-size: 0.82rem; color: var(--accent3); font-family: 'Space Mono', monospace; }
+  .file-group-count { font-size: 0.7rem; color: var(--muted); margin-left: 10px; }
+  .plate-thumb  { max-height: 48px; max-width: 140px; border-radius: 4px; display: block; }
+  .bool-cell    { text-align: center; font-size: 0.95rem; font-weight: 700; }
+  .bool-yes     { color: var(--accent); }
+  .bool-no      { color: var(--danger); }
+  .sc-badge     {
+    display: inline-block;
+    background: #1a2a3a; color: var(--accent3);
+    font-family: 'Space Mono', monospace; font-size: 0.65rem;
+    padding: 2px 6px; border-radius: 4px; border: 1px solid #2a3a5a;
+    margin-right: 4px;
+  }
+  .sc-pattern { font-family: 'Space Mono', monospace; font-size: 0.72rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#0d0f14" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="7" width="20" height="10" rx="2"/>
+      <path d="M6 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/>
+      <circle cx="8" cy="16" r="1" fill="#0d0f14" stroke="none"/>
+      <circle cx="16" cy="16" r="1" fill="#0d0f14" stroke="none"/>
+    </svg>
+  </div>
+  <h1>Plate<span>Scanner</span></h1>
+  <div class="pill">YOLO v11 + EasyOCR</div>
+</header>
+
+<main>
+  <!-- Left: upload + controls -->
+  <div class="left-panel">
+    <div>
+      <div class="section-label">Upload images</div>
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" multiple accept="image/*">
+        <div class="drop-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <h3>Drop images here</h3>
+        <p>or click to select · JPG, PNG, WEBP, BMP</p>
+        <div class="file-count" id="fileCount"></div>
+      </div>
+    </div>
+
+    <div id="fileListWrap" style="display:none">
+      <div class="section-label">Selected files</div>
+      <div class="file-list" id="fileList"></div>
+    </div>
+
+    <button class="run-btn" id="runBtn" disabled>
+      <div class="spinner" id="spinner"></div>
+      <svg id="runIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+      Run Pipeline
+    </button>
+
+    <div class="progress-area" id="progressArea">
+      <div class="section-label">Processing</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="progress-label" id="progressLabel">Uploading…</div>
+    </div>
+
+    <div>
+      <div class="section-label">Session stats</div>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="sv green" id="statImages">0</div>
+          <div class="sk">Images</div>
+        </div>
+        <div class="stat-card">
+          <div class="sv blue" id="statDetections">0</div>
+          <div class="sk">Detections</div>
+        </div>
+        <div class="stat-card">
+          <div class="sv orange" id="statCars">0</div>
+          <div class="sk">Confirmed</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: results -->
+  <div class="right-panel">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="logs">Detection Log</button>
+      <button class="tab-btn" data-tab="results">Confirmed Plates</button>
+      <button class="tab-btn" data-tab="detailed">Detailed Log</button>
+    </div>
+
+    <div class="tab-content active" id="tab-logs">
+      <div class="empty-state" id="logsEmpty">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/>
+        </svg>
+        <p>Upload images and run the pipeline to see logs</p>
+      </div>
+      <table class="log-table" id="logTable" style="display:none">
+        <thead>
+          <tr>
+            <th>Plate Text</th>
+            <th>Country</th>
+            <th>Count</th>
+            <th>Confidence</th>
+          </tr>
+        </thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+
+    <div class="tab-content" id="tab-results">
+      <div class="empty-state" id="resultsEmpty">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="7" rx="1"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <p>No confirmed plates yet · seen ≥3×, no country prefix, valid Dutch sidecode</p>
+      </div>
+      <div class="confirmed-grid" id="confirmedGrid"></div>
+    </div>
+
+    <div class="tab-content" id="tab-detailed">
+      <div class="empty-state" id="detailedEmpty">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 10h18M3 14h18M10 3v18M14 3v18"/>
+        </svg>
+        <p>Run the pipeline to see per-plate detailed analysis</p>
+      </div>
+      <div id="detailedContent" style="display:none"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const fileInput   = document.getElementById('fileInput');
+const dropZone    = document.getElementById('dropZone');
+const fileCount   = document.getElementById('fileCount');
+const fileList    = document.getElementById('fileList');
+const fileListWrap= document.getElementById('fileListWrap');
+const runBtn      = document.getElementById('runBtn');
+const spinner     = document.getElementById('spinner');
+const runIcon     = document.getElementById('runIcon');
+const progressArea= document.getElementById('progressArea');
+const progressBar = document.getElementById('progressBar');
+const progressLabel=document.getElementById('progressLabel');
+const logTable    = document.getElementById('logTable');
+const logBody     = document.getElementById('logBody');
+const logsEmpty   = document.getElementById('logsEmpty');
+const resultsEmpty= document.getElementById('resultsEmpty');
+const confirmedGrid=document.getElementById('confirmedGrid');
+const statImages   = document.getElementById('statImages');
+const statDetections=document.getElementById('statDetections');
+const statCars     = document.getElementById('statCars');
+const detContent   = document.getElementById('detailedContent');
+const detEmpty     = document.getElementById('detailedEmpty');
+
+let selectedFiles = [];
+
+// ── Tabs ─────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── File selection ────────────────────────────────────────
+function fmt(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(0) + ' KB';
+  return (bytes/1024/1024).toFixed(1) + ' MB';
+}
+
+function updateFileList(files) {
+  selectedFiles = Array.from(files);
+  fileCount.textContent = selectedFiles.length
+    ? `${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''} selected`
+    : '';
+
+  if (selectedFiles.length === 0) {
+    fileListWrap.style.display = 'none';
+    runBtn.disabled = true;
+    return;
+  }
+
+  fileListWrap.style.display = 'block';
+  runBtn.disabled = false;
+  fileList.innerHTML = selectedFiles.map(f => `
+    <div class="file-item">
+      <div class="fi-dot"></div>
+      <div class="fi-name">${f.name}</div>
+      <div class="fi-size">${fmt(f.size)}</div>
+    </div>
+  `).join('');
+}
+
+fileInput.addEventListener('change', () => updateFileList(fileInput.files));
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  updateFileList(e.dataTransfer.files);
+});
+
+// ── Run pipeline ──────────────────────────────────────────
+runBtn.addEventListener('click', async () => {
+  if (!selectedFiles.length) return;
+
+  // UI: loading state
+  runBtn.disabled = true;
+  spinner.classList.add('active');
+  runIcon.style.display = 'none';
+  progressArea.classList.add('visible');
+  progressBar.style.width = '10%';
+  progressLabel.textContent = `Uploading ${selectedFiles.length} image(s)…`;
+
+  const fd = new FormData();
+  selectedFiles.forEach(f => fd.append('images', f));
+
+  progressBar.style.width = '30%';
+  progressLabel.textContent = 'Running vehicle detection…';
+
+  let data;
+  try {
+    // Fake progress ticks while waiting
+    let pct = 30;
+    const tick = setInterval(() => {
+      pct = Math.min(pct + 5, 85);
+      progressBar.style.width = pct + '%';
+      if (pct < 50) progressLabel.textContent = 'Detecting licence plates…';
+      else if (pct < 70) progressLabel.textContent = 'Running OCR…';
+      else progressLabel.textContent = 'Aggregating results…';
+    }, 800);
+
+    const res = await fetch('/process', { method: 'POST', body: fd });
+    clearInterval(tick);
+
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    data = await res.json();
+  } catch (err) {
+    progressLabel.textContent = `Error: ${err.message}`;
+    progressBar.style.background = 'var(--danger)';
+    spinner.classList.remove('active');
+    runIcon.style.display = '';
+    runBtn.disabled = false;
+    return;
+  }
+
+  progressBar.style.width = '100%';
+  progressLabel.textContent = `Done — ${data.logs.length} unique pattern(s) found`;
+
+  // ── Render logs ────────────────────────────────────────
+  const { logs, confirmed, detailed } = data;
+
+  statImages.textContent = selectedFiles.length;
+  statDetections.textContent = logs.length;
+  statCars.textContent = confirmed.length;
+
+  if (logs.length === 0) {
+    logTable.style.display = 'none';
+    logsEmpty.style.display = 'flex';
+  } else {
+    logsEmpty.style.display = 'none';
+    logTable.style.display = 'table';
+    logBody.innerHTML = logs.map(l => {
+      if (l.error) return `<tr class="error-row"><td colspan="4">${l.text}</td></tr>`;
+      const isConfirmed = l.count >= 3;
+      const confPct = Math.round(l.conf * 100);
+      const countryBadge = l.country_code
+        ? `<span class="country-badge" title="${l.country || ''}">${l.country_code}</span>`
+        : '';
+      return `
+        <tr>
+          <td>
+            <span class="plate-text">${countryBadge}${l.plate_num || l.text}</span>
+          </td>
+          <td>${l.country ? `<span style="color:var(--accent3);font-family:'Space Mono',monospace;font-size:0.78rem;">${l.country}</span>` : '<span style="color:var(--muted);font-size:0.75rem;">—</span>'}</td>
+          <td>
+            <span class="count-badge ${isConfirmed ? 'confirmed' : ''}">×${l.count}</span>
+          </td>
+          <td>
+            <div class="conf-bar-wrap">
+              <div class="conf-bar" style="width:${confPct}%;background:${confPct>70?'var(--accent)':confPct>40?'var(--accent3)':'var(--accent2)'}"></div>
+            </div>
+            <div class="conf-val">${confPct}%</div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // ── Render confirmed ───────────────────────────────────
+  if (confirmed.length === 0) {
+    resultsEmpty.style.display = 'flex';
+    confirmedGrid.innerHTML = '';
+  } else {
+    resultsEmpty.style.display = 'none';
+    // Sort by count desc
+    const sorted = [...confirmed].sort((a,b) => b.count - a.count);
+    confirmedGrid.innerHTML = sorted.map((c, i) => {
+      const confPct = Math.round(c.conf * 100);
+      const rank = i === 0 ? '🏆 Most frequent' : `#${i+1}`;
+      return `
+        <div class="car-card">
+          <div class="cc-plate">${c.plate_num || c.text}</div>
+          <div class="cc-meta">
+            <span class="meta-chip count">×${c.count} seen</span>
+            ${c.country ? `<span class="meta-chip ctry">${c.country}</span>` : ''}
+            <span class="meta-chip">${confPct}% conf</span>
+          </div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:4px;">${rank}</div>
+        </div>
+      `;
+    }).join('');
+    // Switch to results tab if we have confirmed plates
+    document.querySelector('[data-tab="results"]').click();
+  }
+
+  // ── Render detailed log ───────────────────────────────────────────────────
+  if (!detailed || !detailed.length) {
+    detEmpty.style.display = 'flex';
+    detContent.style.display = 'none';
+  } else {
+    detEmpty.style.display = 'none';
+    detContent.style.display = 'block';
+
+    let tbl = `
+      <table class="log-table" style="table-layout:fixed;width:100%">
+        <colgroup>
+          <col style="width:155px">
+          <col style="width:175px">
+          <col style="width:74px">
+          <col>
+          <col style="width:108px">
+          <col style="width:82px">
+          <col>
+        </colgroup>
+        <thead><tr>
+          <th>Plate</th>
+          <th>Detected Text</th>
+          <th>Country?</th>
+          <th>Country</th>
+          <th>OCR Conf</th>
+          <th>NL Pattern?</th>
+          <th>Sidecode</th>
+        </tr></thead>
+        <tbody>`;
+
+    for (const entry of detailed) {
+      const errNote = entry.error
+        ? ` <span style="color:var(--danger);font-size:.7rem">[${entry.error}]</span>` : '';
+      tbl += `
+        <tr class="file-group-header"><td colspan="7">
+          <span class="file-group-label">${entry.filename}</span>
+          <span class="file-group-count">${entry.plates.length} detection(s)${errNote}</span>
+        </td></tr>`;
+
+      if (!entry.plates.length) {
+        tbl += `<tr><td colspan="7" style="color:var(--muted);font-style:italic;padding:8px 12px">No plates detected in this image</td></tr>`;
+        continue;
+      }
+
+      for (const p of entry.plates) {
+        const pct = Math.round(p.ocr_conf * 100);
+        const cY  = !!p.has_country;
+        const nlY = p.dutch_sidecode != null;
+        const col = pct > 70 ? 'var(--accent)' : pct > 40 ? 'var(--accent3)' : 'var(--accent2)';
+        tbl += `
+          <tr>
+            <td><img src="${p.image_b64}" class="plate-thumb" alt="plate"></td>
+            <td><span class="plate-text">${p.text}</span></td>
+            <td class="bool-cell ${cY ? 'bool-yes' : 'bool-no'}">${cY ? '&#x2713;' : '&#x2717;'}</td>
+            <td>${cY
+              ? `<span style="color:var(--accent3);font-family:'Space Mono',monospace;font-size:.78rem">${p.country}</span>`
+              : `<span style="color:var(--muted)">—</span>`
+            }</td>
+            <td>
+              <div class="conf-bar-wrap">
+                <div class="conf-bar" style="width:${pct}%;background:${col}"></div>
+              </div>
+              <div class="conf-val">${pct}%</div>
+            </td>
+            <td class="bool-cell ${nlY ? 'bool-yes' : 'bool-no'}">${nlY ? '&#x2713;' : '&#x2717;'}</td>
+            <td>${nlY
+              ? `<span class="sc-badge">#${p.dutch_sidecode}</span><span class="sc-pattern">${p.sidecode_pattern}</span>`
+              : `<span style="color:var(--muted)">—</span>`
+            }</td>
+          </tr>`;
+      }
+    }
+
+    tbl += '</tbody></table>';
+    detContent.innerHTML = tbl;
+  }
+
+  // Reset button
+  spinner.classList.remove('active');
+  runIcon.style.display = '';
+  runBtn.disabled = false;
+});
+</script>
+</body>
+</html>

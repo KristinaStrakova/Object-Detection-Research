@@ -4,3 +4,4 @@ ultralytics>=8.2
 easyocr>=1.7
 opencv-python-headless
 numpy
+gradio>=4.0
